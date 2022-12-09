@@ -18,16 +18,16 @@ const con = mysql.createPool({
 /* GET users listing. */
 router.post('/register', async function (req, res, next) {
   try {
-    let { full_names, date_of_birth, province, city, gender,msisdn, password } = req.body; 
+    let { full_names, date_of_birth, province, city, gender,msisdn, password, smartclubtoken } = req.body; 
    
     const hashed_password = md5(password.toString())
 
     const checkMSISDN = `Select msisdn FROM tblmykasausers WHERE msisdn = ?`
     con.query(checkMSISDN, [msisdn], (err, result = [], fields) => {
       if(!result.length){
-        const sql = `Insert Into tblmykasausers (full_names, date_of_birth, province, city, gender, msisdn, password) VALUES (?, ?, ?, ?, ?, ?,? )`
+        const sql = `Insert Into tblmykasausers (full_names, date_of_birth, province, city, gender, msisdn, password, smartclubtoken) VALUES (?, ?, ?, ?, ?, ?,?, ? )`
         con.query(
-          sql, [full_names, date_of_birth, province, city, gender, msisdn, hashed_password],
+          sql, [full_names, date_of_birth, province, city, gender, msisdn, hashed_password, smartclubtoken],
         function(err, result, fields) {
           if(err){
             res.send({ status: 0, data: err });
