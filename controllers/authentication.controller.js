@@ -4,6 +4,8 @@ const md5 = require('md5');
 const jwt = require('jsonwebtoken');
 
 const mysql = require('mysql');
+const nodemailer = require('nodemailer');
+const { Router } = require('express');
 
 const con = mysql.createPool({
   connectionLimit: process.env.CONNECTION_LIMIT,    // the number of connections node.js will hold open to our database
@@ -105,6 +107,47 @@ router.post('/checkMobile', async function (req, res, next){
   catch(error) {
     res.send({status: 0, error: error});
   }
+})
+
+var transport = nodemailer.createTransport({
+  service: 'gmail',
+  auth:{
+    user: process.env.EMAIL,
+    pass: process.env.PASSWORD
+  }
+})
+
+router.post('/forgotPassword', (req, res, next) => {
+  const user = req.body;
+  query = "select msisdn, password from tblmykasausers where msisdn=?";
+  con.query(query,[user.msisdn],(err, results) => {
+    if(!err){
+      if(results.length <= 0)
+      {
+        return res.status(200).json({message:" Password send successfully to your email. "});
+      }
+      else{
+        var mailOptions = {
+          from: process.env.EMAIL,
+          to: results[0].msisdn,
+          subject: 'Password by Mykasa App',
+          html: '<p><b>Your Login details for MyKasa App</b><br><b>Email: </b>'+results[0].msisdn+'<br><b>Password: </b>'+results[0].password+'<br><a href="https://mykasa.herokuapp.com/user/login">Click here to login</a></p>'
+        };
+        transport.sendMail(mailOptions, function(error, info){
+          if(error) {
+            console.log(error);
+          }
+          else{
+            console.log('Email sent: '+info.response);
+          }
+        });
+        return res.status(200).json({message:" Password send successfully to your email. "});
+      }
+    }
+    else{
+      return res.status(500).json(err);
+    }
+  })
 })
 
 module.exports = router;
