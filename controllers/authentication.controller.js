@@ -7,6 +7,10 @@ const mysql = require('mysql');
 const nodemailer = require('nodemailer');
 const { Router } = require('express');
 
+//Password recovery
+const randomstring = require("randomstring");
+const twilio = require('twilio');
+
 const con = mysql.createPool({
   connectionLimit: process.env.CONNECTION_LIMIT,    // the number of connections node.js will hold open to our database
   password: process.env.DB_PASS,
@@ -109,45 +113,42 @@ router.post('/checkMobile', async function (req, res, next){
   }
 })
 
-var transport = nodemailer.createTransport({
-  service: 'gmail',
-  auth:{
-    user: process.env.EMAIL,
-    pass: process.env.PASSWORD
-  }
-})
 
-router.post('/forgotPassword', (req, res, next) => {
-  const user = req.body;
-  query = "select msisdn, password from tblmykasausers where msisdn=?";
-  con.query(query,[user.msisdn],(err, results) => {
-    if(!err){
-      if(results.length <= 0)
-      {
-        return res.status(200).json({message:" Password send successfully to your email. "});
+router.post('/password_recovery', (req, res) => {
+  const msisdn = req.body.msisdn;
+
+  connection.query('SELECT msisdn FROM tblmykasausers WHERE msisdn = ?', [msisdn], (error, results) => {
+      if (error) {
+          res.status(500).json({ message: 'Error in server' });
+      } else if (results.length === 0) {
+          res.status(404).json({ message: 'No user found with this phone number' });
+      } else {
+          const msisdn = results[0].msisdn;
+          const tempPassword = randomstring.generate({
+              length: 6,
+              charset: 'alphanumeric'
+          });
+
+          // Update the user's password with the temporary password
+          connection.query('UPDATE tblmykasausers SET password = ? WHERE msisdn = ?', [tempPassword, msisdn], (error) => {
+              if (error) {
+                  res.status(500).json({ message: 'Error in server' });
+              } else {
+                  // Send the temporary password via SMS using Twilio
+                  const client = new twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
+                  client.messages.create({
+                      body: `Your temporary password is ${tempPassword}. Please change your password after logging in.`,
+                      from: '+19295562759',
+                      to: msisdn
+                  }).then((message) => {
+                      res.status(200).json({ message: 'Temporary password sent to phone number' });
+                  }).catch((error) => {
+                      res.status(500).json({ message: 'Error in sending SMS' });
+                  });
+              }
+          });
       }
-      else{
-        var mailOptions = {
-          from: process.env.EMAIL,
-          to: results[0].msisdn,
-          subject: 'Password by Mykasa App',
-          html: '<p><b>Your Login details for MyKasa App</b><br><b>Email: </b>'+results[0].msisdn+'<br><b>Password: </b>'+results[0].password+'<br><a href="https://mykasa.herokuapp.com/user/login">Click here to login</a></p>'
-        };
-        transport.sendMail(mailOptions, function(error, info){
-          if(error) {
-            console.log(error);
-          }
-          else{
-            console.log('Email sent: '+info.response);
-          }
-        });
-        return res.status(200).json({message:" Password send successfully to your email. "});
-      }
-    }
-    else{
-      return res.status(500).json(err);
-    }
-  })
-})
+  });
+});
 
 module.exports = router;
