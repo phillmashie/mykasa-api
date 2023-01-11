@@ -117,7 +117,7 @@ router.post('/checkMobile', async function (req, res, next){
 router.post('/password_recovery', (req, res) => {
   const msisdn = req.body.msisdn;
 
-  connection.query('SELECT msisdn FROM tblmykasausers WHERE msisdn = ?', [msisdn], (error, results) => {
+  con.query('SELECT msisdn FROM tblmykasausers WHERE msisdn = ?', [msisdn], (error, results) => {
       if (error) {
           res.status(500).json({ message: 'Error in server' });
       } else if (results.length === 0) {
@@ -130,7 +130,7 @@ router.post('/password_recovery', (req, res) => {
           });
 
           // Update the user's password with the temporary password
-          connection.query('UPDATE tblmykasausers SET password = ? WHERE msisdn = ?', [tempPassword, msisdn], (error) => {
+          con.query('UPDATE tblmykasausers SET password = ? WHERE msisdn = ?', [tempPassword, msisdn], (error) => {
               if (error) {
                   res.status(500).json({ message: 'Error in server' });
               } else {
