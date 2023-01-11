@@ -114,6 +114,40 @@ router.post('/checkMobile', async function (req, res, next){
 })
 
 
+router.post('/checkIfRegistered', async function (req, res, next){
+  try{
+    let {msisdn} = req.body;
+    const sql = `SELECT COUNT(*) AS cnt FROM tblmykasausers WHERE msisdn = ?`
+    con.query(
+      sql, [msisdn],
+      function(err,result, fields){
+        if(err) {
+          console.log(err);
+        }else{
+          // checking if the user is a PAV Sim card holder
+          if(result[0].cnt > 0){  
+            // if The user is a PAV Sim card holder
+            res.status(200).send({
+            message: `User Is registered on MyKasa:(200)`
+              });
+            }
+            // if user is not a PAV Sim Card holder
+          else{
+            res.status(400).send({
+              message: `User Is not registered on MyKasa:(400) `
+               });
+          }
+          
+        }
+      }
+    )
+  }
+  catch(error) {
+    res.send({status: 0, error: error});
+  }
+})
+
+
 router.post('/password_recovery', (req, res) => {
   const msisdn = req.body.msisdn;
 
@@ -139,7 +173,7 @@ router.post('/password_recovery', (req, res) => {
                   client.messages.create({
                       body: `Your temporary password is ${tempPassword}. Please change your password after logging in.`,
                       from: '+19295562759',
-                      to: '+'+msisdn
+                      to: msisdn
                   }).then((message) => {
                       res.status(200).json({ message: 'Temporary password sent to phone number' });
                   }).catch((error) => {
