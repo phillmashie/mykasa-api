@@ -139,7 +139,7 @@ router.post('/password_recovery', (req, res) => {
                   client.messages.create({
                       body: `Your temporary password is ${tempPassword}. Please change your password after logging in.`,
                       from: '+19295562759',
-                      to: msisdn
+                      to: '+'+msisdn
                   }).then((message) => {
                       res.status(200).json({ message: 'Temporary password sent to phone number' });
                   }).catch((error) => {
